@@ -19,7 +19,10 @@ This contains all the logic surrrounding how our dataset is downloaded and/or pr
 
 #### PIP/CONDA env
 Where we store all the libraries needed, by default this is wandb, PL, pySmartDL (for speedy dataset downloads) 
-
+This can be generated from a working env with 
+```
+conda env export > environment.yml
+```
 ## Best Practice:
 
 Pytorch lightning extends pytorch to separate data and logic. 
