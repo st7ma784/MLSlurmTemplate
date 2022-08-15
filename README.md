@@ -6,11 +6,19 @@ We'll use pytorchlightning for its hardware agnotsticism and abstraction of triv
 
 ## Deployment : 
 This repo is designed to complement the  st7ma784/MLModelDeploy repo. there you will find code for deploying this to HEC/SLURM/ other.
-### WE Need: 
-A Train script. 
-A Sweep script.
-A script containing a DataModule
-PIP/CONDA env
+### WE Have: 
+
+#### A Train script. 
+This is where we define the core logic, note that PL doesn't need us to specify hardware for our runs! there's no .cuda() calls - if absoutely needed you may need the occassional to(self.device) but you may e doing something wrong if thats the case. 
+
+#### A Sweep script. (CREATESWEEP + RUN SWEEP) 
+The sweep defines the settings we wish to trial, there are different methods, things that can be tracked and it's all passed through a dict to the train script
+
+#### A script containing a DataModule
+This contains all the logic surrrounding how our dataset is downloaded and/or preprocessed. Would recommend putting anything CPU-bound prep wise or non-training like tokenizations in here! 
+
+#### PIP/CONDA env
+Where we store all the libraries needed, by default this is wandb, PL, pySmartDL (for speedy dataset downloads) 
 
 ## Best Practice:
 
