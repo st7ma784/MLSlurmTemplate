@@ -1,0 +1,4 @@
+wandb 
+pytorch-lightning
+pySmartDL
+transformers
