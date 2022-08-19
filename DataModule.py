@@ -29,6 +29,7 @@ class myDataset(CocoCaptions):
         if not os.path.exists(annFile):
             print('Error: annFile does not exist: {}'.format(annFile))
             return None
+        #if using the HEC, you may want a Path(annFile).touch() call here to update the altered time if your files are stored in $global_scratch
         super().__init__(root, annFile, *args, **kwargs)
         print('Done')
     def __getitem__(self, index: int):
@@ -93,6 +94,7 @@ class myDataModule(pl.LightningDataModule):
     def prepare_data(self):
         '''called only once and on 1 GPU'''
         # # download data
+        #If using the HEC, consider altering this to call directly the cmdline WGET/CURL  and then unzip -DD to modify the dates. 
         
         if not os.path.exists(self.data_dir):
             os.makedirs(self.data_dir,exist_ok=True)
