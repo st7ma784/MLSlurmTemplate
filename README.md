@@ -1,8 +1,10 @@
 # MLModelDev
-A template repo for creating a new model 
+A template repo for creating a new model
 
 ## This repo details how to create a clean code base for a model. 
 We'll use pytorchlightning for its hardware agnotsticism and abstraction of trivial decisions. 
+If you want help converting Pytorch to Pytorch-lightning: https://github.com/Lightning-AI/lightning/tree/master/examples/convert_from_pt_to_pl
+
 
 ## Deployment : 
 This repo is designed to complement the  st7ma784/MLModelDeploy repo. there you will find code for deploying this to HEC/SLURM/ other.

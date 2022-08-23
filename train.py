@@ -3,10 +3,9 @@ import pytorch_lightning
 from pytorch_lightning import LightningModule
 import torch.nn as nn
 import torch
-import numpy as np
-from typing import Optional
+from typing import Dict, Optional
 from pytorch_lightning.callbacks import TQDMProgressBar
-from PIL import Image
+import wandb
 
 
 class myLightningModule(LightningModule):
@@ -36,7 +35,7 @@ class myLightningModule(LightningModule):
         self.loss=torch.nn.CrossEntropyLoss()
 
     def initialize_parameters(self):
-        nn.init.normal_(
+        
         proj_std = (self.model.width ** -0.5) * ((2 * self.model.layers) ** -0.5)
         attn_std = self.model.width ** -0.5
         fc_std = (2 * self.model.width) ** -0.5
@@ -69,35 +68,45 @@ class myLightningModule(LightningModule):
       
         return [optimizer] #,[scheduler]
 
+def wandbtrain(config={
+        "batchsize":16,
+        "learning_rate":2e-4,
+        "precision":16,
+    },dir="/Data",devices="auto",):
+    with wandb.init( project="demoProject", entity="st7ma784", job_type="train", config=config) as run:  
+        logtool= pytorch_lightning.loggers.WandbLogger(experiment=run)
+        train(config, dir,devices,logtool)
 
 def train(config={
         "batchsize":16,
         "learning_rate":2e-4,
         "precision":16,
-    },dir="/Data"):
+    },dir="/Data",devices="auto",logtool=None):
     
-    
+    if not isinstance(config, dict):
+        config= vars(config) # this oversees conversion from namespaces from argparsers to dict as might be passed by wandb
+
     #Load Data Module and begin training
     from DataModule import myDataModule
-    with wandb.init( project=<WANDBPROJECTNAME>, entity=<WANDBUNAME>, job_type="train", config=config) as run:  
-        model=myLightningModule(  learning_rate = config["learning_rate"],
-                                    train_batch_size=config["batchsize"],
-                                    adam_epsilon = 1e-8)
-        Dataset=myDataModule(Cache_dir=dir,batch_size=config["batchsize"])
-        callbacks=[
-            TQDMProgressBar()
-        ]
-        logtool= pytorch_lightning.loggers.WandbLogger(experiment=run)
-        trainer=pytorch_lightning.Trainer(
-            devices="auto",
-            accelerator="auto",
-            max_epochs=100,
-            logger=logtool,
-            callbacks=callbacks,
-            gradient_clip_val=0.25,
-            precision=config["precision"]
-        )
-        trainer.fit(model,Dataset)
+    
+        #This is a great logging tool for HEC, but may not work if using the demoparse with SLURM
+    model=myLightningModule(  learning_rate = config["learning_rate"],
+                                train_batch_size=config["batchsize"],
+                                adam_epsilon = 1e-8)
+    Dataset=myDataModule(Cache_dir=dir,batch_size=config["batchsize"])
+    callbacks=[
+        TQDMProgressBar()
+    ]
+    trainer=pytorch_lightning.Trainer(
+        devices=devices,
+        accelerator="auto",
+        max_epochs=100,
+        logger=logtool,
+        callbacks=callbacks,
+        gradient_clip_val=0.25,
+        precision=config["precision"]
+    )
+    trainer.fit(model,Dataset)
 
 if __name__ == '__main__':
     config={

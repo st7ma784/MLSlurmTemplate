@@ -66,12 +66,11 @@ class myDataModule(pl.LightningDataModule):
         
     def train_dataloader(self):
         if not hasattr(self, 'train'):
-            #check if "espretrain.pt") exists in the directory
             if os.path.exists("train.pt"):
-                self.train
+                self.train=torch.load("train.pt")
             else:
                 self.download_data()
-            
+        # IF you know that you're only ever using 1 gpu (HEC /local runs only...) then consider using https://lightning-bolts.readthedocs.io/en/latest/dataloaders/async.html
         return torch.utils.data.DataLoader(self.train, batch_size=self.batch_size, shuffle=True, num_workers=4, prefetch_factor=4, pin_memory=True,drop_last=True)
     def val_dataloader(self):
         if not hasattr(self, 'val'):
