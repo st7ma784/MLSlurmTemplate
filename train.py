@@ -104,6 +104,8 @@ def train(config={
         logger=logtool,
         callbacks=callbacks,
         gradient_clip_val=0.25,
+        num_nodes=os.getenv("SLURM_JOB_NUM_NODES",1), # A way of auto scaling down the line if planning to  use slurm/BEDE/HEC - feel free to ignore !
+
         precision=config["precision"]
     )
     trainer.fit(model,Dataset)
