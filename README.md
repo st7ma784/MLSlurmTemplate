@@ -13,6 +13,9 @@ This repo is designed to complement the  st7ma784/MLModelDeploy repo. there you 
 #### A Train script. 
 This is where we define the core logic, note that PL doesn't need us to specify hardware for our runs! there's no .cuda() calls - if absoutely needed you may need the occassional to(self.device) but you may e doing something wrong if thats the case. 
 
+In this file, we've put some useful blocks for inspiration to get you going including CKA Alignment etc. (home brew implementation --- if this is needed as a core part of research, it may be worth satisfying yourself that the optimizations done are equivalent to the maths in the paper) 
+
+
 #### A Sweep script. (CREATESWEEP + RUN SWEEP) 
 The sweep defines the settings we wish to trial, there are different methods, things that can be tracked and it's all passed through a dict to the train script
 
