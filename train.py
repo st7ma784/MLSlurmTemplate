@@ -31,9 +31,12 @@ class myLightningModule(LightningModule):
         self.save_hyperparameters()
         
         # self.model = transformer(layers=layers, width=width)
-        
+        #self.initialize_parameters()
+        self.handles=[]
         self.loss=torch.nn.CrossEntropyLoss()
-
+##################################################
+        ###############Some good practive ideas???
+##################################################
     def initialize_parameters(self):
         
         proj_std = (self.model.width ** -0.5) * ((2 * self.model.layers) ** -0.5)
@@ -47,8 +50,17 @@ class myLightningModule(LightningModule):
             nn.init.normal_(block.mlp.c_proj.weight, std=proj_std)
 
         nn.init.normal_(self.text_projection, std=self.encoder.width ** -0.5)
-  
 
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(
+            self.parameters(), lr=self.hparams.learning_rate, eps=self.hparams.adam_epsilon)
+      
+        return [optimizer] #,[scheduler]
+
+
+#############################################
+    ##################Logic step of our model
+#############################################
     def forward(self, x):
         return self.model(x)
 
@@ -60,14 +72,111 @@ class myLightningModule(LightningModule):
         loss = self.loss(outputs,captions)
         self.log('train_loss', loss,prog_bar=True)
         return {"loss": loss}
+###############################################
+    ####Some validation with CKA for autoencoders (If you have a baseline model)
+###############################################
+    def on_validation_epoch_start(self):
+        
+        self._insert_hooks()
+        self.model1.eval()
+        self.model2.eval()
+    def on_validation_step(self,batch,*args):
 
+        self.model1_features = {}  #reset list of forward hooks
+        self.model2_features = {}  
+        model(batch[0]) #run through main mode
+        ###If your model has supervised data, then perhaps do a loss with your date here!
+        model2(batch[0])# to compare supervision model
+        out=torch.stack([self._orig_HSIC(K, K) for K in self.model1_features.values()])
+        self.hsic_matrix0=torch.add(self.hsic_matrix0,out) 
+        out=torch.stack([self._orig_HSIC(L, L) for L in self.model2_features.values()])
+        self.hsic_matrix2=torch.add(self.hsic_matrix2,out)
+        out=torch.stack([self._orig_HSIC(K, L) for K in self.model1_features.values() for L in self.model2_features.values()])
+        self.hsic_matrix1=torch.add(self.hsic_matrix1,out.reshape(N,M))
+        self.hsic_matrix = self.hsic_matrix1 / (self.hsic_matrix0.unsqueeze(1).sqrt()*self.hsic_matrix2.unsqueeze(0).sqrt())
+        if not torch.isnan(self.hsic_matrix).any():
+            warn("HSIC computation resulted in NANs")
             
-    def configure_optimizers(self):
-        optimizer = torch.optim.Adam(
-            self.parameters(), lr=self.hparams.learning_rate, eps=self.hparams.adam_epsilon)
-      
-        return [optimizer] #,[scheduler]
+    def on_validation_epoch_end(self):
+        self.model1.train()
+        self.model2.train()
+        for handle in self.handles:
+            handle.remove()
+    
+    def _log_layer(self, model: str, name: str, layer: nn.Module,inp: torch.Tensor, out: torch.Tensor):
+        with torch.no_grad():
+            if model == "model1":
+                X = out.flatten(1)
+                self.model1_features[name] = (X @ X.t()).fill_diagonal_(0)
+            elif model == "model2":
+                X = out.flatten(1)
+                self.model2_features[name] = (X @ X.t()).fill_diagonal_(0)
+            else:
+                raise RuntimeError("Unknown model name for _log_layer.")
 
+    def _insert_hooks(self):
+        for name, layer in self.model1.named_modules():
+            if self.model1_layers is not None:
+                if name in self.model1_layers:
+                    self.model1_info['Layers'] += [name]
+                    self.handles.append(layer.register_forward_hook(partial(self._log_layer, "model1", name)))
+            else:
+                self.model1_info['Layers'] += [name]
+                self.handles.append(layer.register_forward_hook(partial(self._log_layer, "model1", name)))
+
+        # Model 2
+        for name, layer in self.model2.named_modules():
+            if self.model2_layers is not None:
+                if name in self.model2_layers:
+                    self.model2_info['Layers'] += [name]
+                    self.handles.append(layer.register_forward_hook(partial(self._log_layer, "model2", name)))
+            else:
+
+                self.model2_info['Layers'] += [name]
+                self.handles.append(layer.register_forward_hook(partial(self._log_layer, "model2", name)))
+
+   
+  
+    def export(self) -> Dict:
+        """
+        Exports the CKA data along with the respective model layer names.
+        :return:
+        """
+        return {
+            "model1_name": self.model1_info['Name'],
+            "model2_name": self.model2_info['Name'],
+            "CKA": self.hsic_matrix,
+            "model1_layers": self.model1_info['Layers'],
+            "model2_layers": self.model2_info['Layers'],
+            "dataset1_name": self.model1_info['Dataset'],
+            "dataset2_name": self.model2_info['Dataset'],
+
+        }
+
+    def plot_results(self,
+                     save_path: str = None,
+                     title: str = None):
+        fig, ax = plt.subplots()
+        im = ax.imshow(self.hsic_matrix, origin='lower', cmap='magma')
+        ax.set_xlabel(f"Layers {self.model2_info['Name']}", fontsize=15)
+        ax.set_ylabel(f"Layers {self.model1_info['Name']}", fontsize=15)
+
+        if title is not None:
+            ax.set_title(f"{title}", fontsize=18)
+        else:
+            ax.set_title(f"{self.model1_info['Name']} vs {self.model2_info['Name']}", fontsize=18)
+
+        add_colorbar(im)
+        plt.tight_layout()
+
+        if save_path is not None:
+            plt.savefig(save_path, dpi=300)
+
+        #plt.show()
+    
+#############################################
+    #Code to call run with and without loggers (W+B)
+#############################################
 def wandbtrain(config={
         "batchsize":16,
         "learning_rate":2e-4,
