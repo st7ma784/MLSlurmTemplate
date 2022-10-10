@@ -177,14 +177,63 @@ class myLightningModule(LightningModule):
 #############################################
     #Code to call run with and without loggers (W+B)
 #############################################
-def wandbtrain(config={
-        "batchsize":16,
-        "learning_rate":2e-4,
+
+
+def wandbtrain(config=None,dir="/Data",devices="auto",accelerator="auto",Dataset=None):
+    if config is not None and not isinstance(config,dict):
+        #print("Config is not a dict")
+        config=config.__dict__
+        #print("as dict: {}".format(config))
+    logtool= pytorch_lightning.loggers.WandbLogger( project="MYPROJECY",entity="WANDBUSER",experiment=config, save_dir=dir)
+    dir=config.get("dir",dir)
+    train(config,dir,devices,accelerator,Dataset,logtool)
+    
+def train(config={
+        "batch_size":16,
+        "learning_rate":2e-3,
         "precision":16,
-    },dir="/Data",devices="auto",):
-    with wandb.init( project="demoProject", entity="st7ma784", job_type="train", config=config) as run:  
-        logtool= pytorch_lightning.loggers.WandbLogger(experiment=run)
-        train(config, dir,devices,logtool)
+        "embed_dim": 512,
+        "transformer_width": 512,
+        "transformer_heads": 32,
+        "transformer_layers": 4,
+        "JSE":False,
+    },dir="/Data",devices="auto",accelerator="auto",Dataset=None,logtool=None):
+    model=MYMODEL( learning_rate = config["learning_rate"],
+                                JSE=config.get("JSE",False),
+                                    train_batch_size=config["batch_size"],
+                                    embed_dim= config[ "embed_dim"],
+                                    transformer_width= config["transformer_width"],
+                                    transformer_heads= config["transformer_heads"],
+                                    transformer_layers= config["transformer_layers"])
+    if Dataset is None:
+        from BuildSpainDataSet import COCODataModule
+        Dataset=COCODataModule(Cache_dir=dir,batch_size=config["batch_size"])
+    Dataset.batch_size=config["batch_size"]
+    callbacks=[
+        TQDMProgressBar(),
+        EarlyStopping(monitor="loss", mode="min",patience=10,check_finite=True,stopping_threshold=0.001),
+    ]
+    p=config.get("precision",'bf16')
+    if isinstance(p,str):
+        p='bf16' if p=="bf16" else int(p)
+    trainer=pytorch_lightning.Trainer(
+            devices=devices,
+            accelerator="auto",
+            max_epochs=100,
+            logger=logtool,
+            callbacks=callbacks,
+            gradient_clip_val=0.25,
+            num_nodes=int(os.getenv("SLURM_JOB_NUM_NODES",1)), # A way of auto scaling down the line if planning to  use slurm/BEDE/HEC - feel free to ignore !
+            strategy="ddp",
+            fast_dev_run=False,
+            precision=p
+    )
+    if config["batch_size"] !=1:
+        
+        trainer.fit(model,Dataset)
+    else:
+        return 0 #No need to train if batch size is 1
+
 
 def train(config={
         "batchsize":16,
@@ -213,7 +262,7 @@ def train(config={
         logger=logtool,
         callbacks=callbacks,
         gradient_clip_val=0.25,
-        num_nodes=os.getenv("SLURM_JOB_NUM_NODES",1), # A way of auto scaling down the line if planning to  use slurm/BEDE/HEC - feel free to ignore !
+        num_nodes=int(os.getenv("SLURM_JOB_NUM_NODES",1)), # A way of auto scaling down the line if planning to  use slurm/BEDE/HEC - feel free to ignore !
 
         precision=config["precision"]
     )
