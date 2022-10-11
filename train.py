@@ -29,10 +29,18 @@ class myLightningModule(LightningModule):
 
         super().__init__()
         self.save_hyperparameters()
-        
+        # BUILD YOUR MODEL HERE!! 
         # self.model = transformer(layers=layers, width=width)
+        #And May i suggest? 
         #self.initialize_parameters()
+        
+        #The following is for Validation with CKA, comparing activations to a pretrained model... see validation steps for more. 
+        # You could always rrewrite this for just a trainstep with different splits. 
         self.handles=[]
+        self.model1_info={'Name':"SelfCLIP",'Layers':[]}
+        self.model2_info={'Name': "Stock CLIP", 'Layers':[]}
+        
+        #And define our loss... 
         self.loss=torch.nn.CrossEntropyLoss()
 ##################################################
         ###############Some good practive ideas???
@@ -75,34 +83,43 @@ class myLightningModule(LightningModule):
 ###############################################
     ####Some validation with CKA for autoencoders (If you have a baseline model)
 ###############################################
-    def on_validation_epoch_start(self):
-        
+      def on_validation_epoch_start(self):
+        self.eval()
+        self.freeze()
+    #     #import clip model here]
+        self.model2,_ = clip.load("ViT-B/32", device=self.device)
+        self.N = len(list(self.modules()))
+        self.M = len(list(self.model2.modules()))
         self._insert_hooks()
-        self.model1.eval()
+        self.eval()
         self.model2.eval()
-    def on_validation_step(self,batch,*args):
+    def validation_step(self,batch,*args):
 
         self.model1_features = {}  #reset list of forward hooks
         self.model2_features = {}  
-        model(batch[0]) #run through main mode
+        self.encode_image(batch[0]) #run through main mode
         ###If your model has supervised data, then perhaps do a loss with your date here!
-        model2(batch[0])# to compare supervision model
+        self.model2.encode_image(batch[0])# to compare supervision model
         out=torch.stack([self._orig_HSIC(K, K) for K in self.model1_features.values()])
         self.hsic_matrix0=torch.add(self.hsic_matrix0,out) 
         out=torch.stack([self._orig_HSIC(L, L) for L in self.model2_features.values()])
         self.hsic_matrix2=torch.add(self.hsic_matrix2,out)
         out=torch.stack([self._orig_HSIC(K, L) for K in self.model1_features.values() for L in self.model2_features.values()])
-        self.hsic_matrix1=torch.add(self.hsic_matrix1,out.reshape(N,M))
+        self.hsic_matrix1=torch.add(self.hsic_matrix1,out.reshape(self.N,self.M))
         self.hsic_matrix = self.hsic_matrix1 / (self.hsic_matrix0.unsqueeze(1).sqrt()*self.hsic_matrix2.unsqueeze(0).sqrt())
         if not torch.isnan(self.hsic_matrix).any():
             warn("HSIC computation resulted in NANs")
             
-    def on_validation_epoch_end(self):
-        self.model1.train()
-        self.model2.train()
+    def on_validation_epoch_end(self,batch_idx):
+        self.unfreeze()
+        self.train()
+        self.plot_results("HSIC{}.jpg".format(batch_idx))
+        self.log_image(key="HSIC{}".format(batch_idx), images=["HSIC{}.jpg".format(batch_idx)])
+
         for handle in self.handles:
             handle.remove()
-    
+        del self.model2
+
     def _log_layer(self, model: str, name: str, layer: nn.Module,inp: torch.Tensor, out: torch.Tensor):
         with torch.no_grad():
             if model == "model1":
@@ -115,42 +132,25 @@ class myLightningModule(LightningModule):
                 raise RuntimeError("Unknown model name for _log_layer.")
 
     def _insert_hooks(self):
-        for name, layer in self.model1.named_modules():
-            if self.model1_layers is not None:
-                if name in self.model1_layers:
-                    self.model1_info['Layers'] += [name]
-                    self.handles.append(layer.register_forward_hook(partial(self._log_layer, "model1", name)))
-            else:
-                self.model1_info['Layers'] += [name]
-                self.handles.append(layer.register_forward_hook(partial(self._log_layer, "model1", name)))
-
+        for name, layer in self.named_modules():
+            self.model1_info['Layers'] += [name]
+            self.handles.append(layer.register_forward_hook(partial(self._log_layer, "model1", name)))
         # Model 2
         for name, layer in self.model2.named_modules():
-            if self.model2_layers is not None:
-                if name in self.model2_layers:
-                    self.model2_info['Layers'] += [name]
-                    self.handles.append(layer.register_forward_hook(partial(self._log_layer, "model2", name)))
-            else:
-
-                self.model2_info['Layers'] += [name]
-                self.handles.append(layer.register_forward_hook(partial(self._log_layer, "model2", name)))
-
-   
+            self.model2_info['Layers'] += [name]
+            self.handles.append(layer.register_forward_hook(partial(self._log_layer, "model2", name)))
   
-    def export(self) -> Dict:
+    def export(self):
         """
         Exports the CKA data along with the respective model layer names.
         :return:
         """
         return {
-            "model1_name": self.model1_info['Name'],
-            "model2_name": self.model2_info['Name'],
+            "model1_name": "Trained",
+            "model2_name": "PretrainedModel",
             "CKA": self.hsic_matrix,
-            "model1_layers": self.model1_info['Layers'],
-            "model2_layers": self.model2_info['Layers'],
-            "dataset1_name": self.model1_info['Dataset'],
-            "dataset2_name": self.model2_info['Dataset'],
-
+            "model1_layers": self.named_modules(),
+            "model2_layers": self.model2.named_modules(),
         }
 
     def plot_results(self,
@@ -171,8 +171,20 @@ class myLightningModule(LightningModule):
 
         if save_path is not None:
             plt.savefig(save_path, dpi=300)
+#####UTILS 
 
-        #plt.show()
+from mpl_toolkits import axes_grid1
+import matplotlib.pyplot as plt
+
+def add_colorbar(im, aspect=10, pad_fraction=0.5, **kwargs):
+    """Add a vertical color bar to an image plot."""
+    divider = axes_grid1.make_axes_locatable(im.axes)
+    width = axes_grid1.axes_size.AxesY(im.axes, aspect=1./aspect)
+    pad = axes_grid1.axes_size.Fraction(pad_fraction, width)
+    current_ax = plt.gca()
+    cax = divider.append_axes("right", size=width, pad=pad)
+    plt.sca(current_ax)
+    return im.axes.figure.colorbar(im, cax=cax, **kwargs)
     
 #############################################
     #Code to call run with and without loggers (W+B)
@@ -192,23 +204,15 @@ def train(config={
         "batch_size":16,
         "learning_rate":2e-3,
         "precision":16,
-        "embed_dim": 512,
-        "transformer_width": 512,
-        "transformer_heads": 32,
-        "transformer_layers": 4,
-        "JSE":False,
     },dir="/Data",devices="auto",accelerator="auto",Dataset=None,logtool=None):
-    model=MYMODEL( learning_rate = config["learning_rate"],
-                                JSE=config.get("JSE",False),
-                                    train_batch_size=config["batch_size"],
-                                    embed_dim= config[ "embed_dim"],
-                                    transformer_width= config["transformer_width"],
-                                    transformer_heads= config["transformer_heads"],
-                                    transformer_layers= config["transformer_layers"])
-    if Dataset is None:
-        from BuildSpainDataSet import COCODataModule
-        Dataset=COCODataModule(Cache_dir=dir,batch_size=config["batch_size"])
-    Dataset.batch_size=config["batch_size"]
+    
+    from DataModule import myDataModule
+    
+        #This is a great logging tool for HEC, but may not work if using the demoparse with SLURM
+    model=myLightningModule(  learning_rate = config["learning_rate"],
+                                train_batch_size=config["batch_size"],
+                                adam_epsilon = 1e-8)
+    Dataset=myDataModule(Cache_dir=dir,batch_size=config["batchsize"])
     callbacks=[
         TQDMProgressBar(),
         EarlyStopping(monitor="loss", mode="min",patience=10,check_finite=True,stopping_threshold=0.001),
@@ -228,46 +232,11 @@ def train(config={
             fast_dev_run=False,
             precision=p
     )
-    if config["batch_size"] !=1:
         
-        trainer.fit(model,Dataset)
-    else:
-        return 0 #No need to train if batch size is 1
-
-
-def train(config={
-        "batchsize":16,
-        "learning_rate":2e-4,
-        "precision":16,
-    },dir="/Data",devices="auto",logtool=None):
-    
-    if not isinstance(config, dict):
-        config= vars(config) # this oversees conversion from namespaces from argparsers to dict as might be passed by wandb
-
-    #Load Data Module and begin training
-    from DataModule import myDataModule
-    
-        #This is a great logging tool for HEC, but may not work if using the demoparse with SLURM
-    model=myLightningModule(  learning_rate = config["learning_rate"],
-                                train_batch_size=config["batchsize"],
-                                adam_epsilon = 1e-8)
-    Dataset=myDataModule(Cache_dir=dir,batch_size=config["batchsize"])
-    callbacks=[
-        TQDMProgressBar()
-    ]
-    trainer=pytorch_lightning.Trainer(
-        devices=devices,
-        accelerator="auto",
-        max_epochs=100,
-        logger=logtool,
-        callbacks=callbacks,
-        gradient_clip_val=0.25,
-        num_nodes=int(os.getenv("SLURM_JOB_NUM_NODES",1)), # A way of auto scaling down the line if planning to  use slurm/BEDE/HEC - feel free to ignore !
-
-        precision=config["precision"]
-    )
     trainer.fit(model,Dataset)
 
+    
+    
 if __name__ == '__main__':
     config={
         "batchsize":12,         #[1,4,8,16,32,64]
