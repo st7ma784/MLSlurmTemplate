@@ -18,7 +18,7 @@ if __name__== "__main__":
     parser=myParser()
     hyperparams = parser.parse_args()
     print(hyperparams)
-    from train import train
+    from models.train import train
     for trial in hyperparams.trials(num=10):
 
         train(trial)

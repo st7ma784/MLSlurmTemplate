@@ -1,6 +1,6 @@
   
 import wandb
-from train import train
+from models.train import train
 import argparse
 import wandb
 from functools import partial
