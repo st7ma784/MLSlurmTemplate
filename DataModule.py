@@ -11,7 +11,6 @@ from torchvision.datasets import CocoCaptions
 T= transforms.Compose([transforms.Resize((224,224),interpolation=Image.NEAREST),transforms.ToTensor()])
 from transformers import AutoTokenizer
 import time
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 tokenizer= AutoTokenizer.from_pretrained("gpt2")
 tokenizer.vocab["</s>"] = tokenizer.vocab_size -1
 tokenizer.pad_token = tokenizer.eos_token 
