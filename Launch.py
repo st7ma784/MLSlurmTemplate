@@ -3,28 +3,29 @@ import pytorch_lightning
 from pytorch_lightning.callbacks import TQDMProgressBar,EarlyStopping
 import os,sys
 
-def wandbtrain(config=None,dir=None,devices=None,accelerator=None,Dataset=None):
-    if config is not None:
-        config=config.__dict__
-        dir=config.get("dir",dir)
-        logtool= pytorch_lightning.loggers.WandbLogger( project="CMLANGSUP",entity="st7ma784", save_dir=dir)
-        print(config)
-
-    else: 
-        #We've got no config, so we'll just use the default, and hopefully a trainAgent has been passed
-        import wandb
-        print("here")
-        run=wandb.init(project="CMLANGSUP",entity="st7ma784",name="CMLANGSUP",config=config)
-        logtool= pytorch_lightning.loggers.WandbLogger( project="CMLANGSUP",entity="st7ma784",experiment=run, save_dir=dir)
-        config=run.config.as_dict()
-    
-    train(config,dir,devices,accelerator,Dataset,logtool)
-
+#### This is our launch function, which builds the dataset, and then runs the model on it. 
 def train(config={
         "batch_size":16, # ADD MODEL ARGS HERE
+         "codeversion":"-1",        
     },dir=None,devices=None,accelerator=None,Dataset=None,logtool=None):
-    from models.train import *
-        
+    
+    #### EDIT HERE FOR DIFFERENT VERSIONS OF A MODEL
+     if codeversion==1:
+        from models.train import myLightningModule
+    elif codeversion==2:
+        from models.trainv2 import myLightningModule
+    elif codeversion==3:
+        from models.trainv3 import myLightningModule
+    elif codeversion==4:
+        from models.trainv4 import myLightningModule
+    elif codeversion==5:
+        from models.trainv5 import myLightningModule
+    elif codeversion==6:
+        from models.trainv6 import myLightningModule
+    else:
+        print("NO CODE VER SPECIFIED!!")
+        from models.train import myLightningModule
+
     model=LightningT5Module(  **config)
     if dir is None:
         dir=config.get("dir",".")
@@ -64,7 +65,24 @@ def train(config={
         trainer.fit(model,Dataset)
     else:
         return 0 #No need to train if batch size is 1
+    
+#### This is a wrapper to make sure we log with Weights and Biases, You'll need your own user for this. 
+def wandbtrain(config=None,dir=None,devices=None,accelerator=None,Dataset=None):
+    if config is not None:
+        config=config.__dict__
+        dir=config.get("dir",dir)
+        logtool= pytorch_lightning.loggers.WandbLogger( project="<PROJECTNAME>",entity="<WANDBUSER>", save_dir=dir)
+        print(config)
 
+    else: 
+        #We've got no config, so we'll just use the default, and hopefully a trainAgent has been passed
+        import wandb
+        print("here")
+        run=wandb.init(project="<PROJECTNAME>",entity="<WANDBUSER>",name="<PROJECTNAME>",config=config)
+        logtool= pytorch_lightning.loggers.WandbLogger( project="<PROJECTNAME>",entity="<WANDBUSER>",experiment=run, save_dir=dir)
+        config=run.config.as_dict()
+    
+    train(config,dir,devices,accelerator,Dataset,logtool)
 def SlurmRun(trialconfig):
 
     job_with_version = '{}v{}'.format("SINGLEGPUTESTLAUNCH", 0)
@@ -83,8 +101,8 @@ def SlurmRun(trialconfig):
     ]
     comm="python"
     if str(os.getenv("HOSTNAME","localhost")).endswith("bede.dur.ac.uk"):
-        sub_commands.extend(['export CONDADIR=/nobackup/projects/bdlan05/$USER/miniconda',])
-        slurm_commands={"account":"bdlan05"}#,"partition":"gpu"} Leaving this part out to run on non-bede slurm
+        sub_commands.extend(['export CONDADIR=/nobackup/projects/<BEDEPROJECT>/$USER/miniconda',])
+        slurm_commands={"account":"<BEDEPROJECT>"}#,"partition":"gpu"} Leaving this part out to run on non-bede slurm
         comm="python3"
     else: 
         sub_commands.extend(['export CONDADIR=/home/$USER/miniconda3',])
@@ -92,11 +110,10 @@ def SlurmRun(trialconfig):
     sub_commands.extend([ '#SBATCH --{}={}\n'.format(cmd, value) for  (cmd, value) in slurm_commands.items()])
     sub_commands.extend([
         'export SLURM_NNODES=$SLURM_JOB_NUM_NODES',
-        'export wandb=9cf7e97e2460c18a89429deed624ec1cbfb537bc',
+        'export wandb=<YOURWANDBAPIKEY>',
         'source $CONDADIR/etc/profile.d/conda.sh',
         'conda activate $CONDADIR/envs/open-ce',# ...and activate the conda environment
     ])
-    #sub_commands.append("srun python3 -m torch.distributed.launch --nproc_per_node=1 --nnodes=1 --node_rank=0 --master_addr='
     script_name= os.path.realpath(sys.argv[0]) #Find this scripts name...
     trialArgs=__get_hopt_params(trialconfig)
 
