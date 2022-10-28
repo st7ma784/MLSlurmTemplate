@@ -3,25 +3,25 @@
 
 ## This repository contains code for VERY fast CI/CD of code. 
 
-##QUICK START: 
+## QUICK START: 
 
-###Step one: 
-  -Put your dataset into the DataModule.py file.
-  -This details how to load your data onto the server. An example is given for MSCOCO.
-###Step two:
-  -Edit the model files.
-  -build or load an existing model in the __init__ function
-  -Include the logic for the forward, train_step, and optionally validation_step too.
+### Step one: 
+  - Put your dataset into the DataModule.py file.
+  - This details how to load your data onto the server. An example is given for MSCOCO.
+### Step two:
+  - Edit the model files.
+  - build or load an existing model in the __init__ function
+  - Include the logic for the forward, train_step, and optionally validation_step too.
 
   More info for code structure at Pytorch-lightning: https://github.com/Lightning-AI/lightning/tree/master/examples/convert_from_pt_to_pl
-###Step three:
-  -edit the demoparse.py file for the differnet parameters your model will have. 
+### Step three:
+  - edit the demoparse.py file for the differnet parameters your model will have. 
   
-###Step four:
-  -debug locally with '''python Launch.py --dir <YOUR DATA LOCATION>''' 
-  -(you may wish to edit Launch to just call train() directly, not the wandbtrain() - in the long run strongly recommend using WandB to track experiments)
+### Step four:
+  - debug locally with '''python Launch.py --dir <YOUR DATA LOCATION>''' 
+  - (you may wish to edit Launch to just call train() directly, not the wandbtrain() - in the long run strongly recommend using WandB to track experiments)
 
-###Step Five: 
+### Step Five: 
   - When happy with code functionality, deploy the code.
   - Login to your favourite SLURM cluster - Such as the N8/Bede cluster, (HEC T.B.D) or an on-prem cluster
   - type into the CLI '''python Launch.py --dir <SLURM DATA DIR> --num_trials <WhatEverYouFancy>'''
