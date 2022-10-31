@@ -100,7 +100,8 @@ def SlurmRun(trialconfig):
     ]
     comm="python"
     if str(os.getenv("HOSTNAME","localhost")).endswith("bede.dur.ac.uk"):
-        sub_commands.extend(['export CONDADIR=/nobackup/projects/<BEDEPROJECT>/$USER/miniconda',])
+        sub_commands.extend(['export CONDADIR=/nobackup/projects/<BEDEPROJECT>/$USER/miniconda',
+                            'export NCCL_SOCKET_IFNAME=ib0'])
         slurm_commands={"account":"<BEDEPROJECT>"}#,"partition":"gpu"} Leaving this part out to run on non-bede slurm
         comm="python3"
     else: 
