@@ -104,7 +104,8 @@ def SlurmRun(trialconfig):
         slurm_commands={"account":"<BEDEPROJECT>"}#,"partition":"gpu"} Leaving this part out to run on non-bede slurm
         comm="python3"
     else: 
-        sub_commands.extend(['export CONDADIR=/home/$USER/miniconda3',])
+        sub_commands.extend(['export CONDADIR=/home/$USER/miniconda3',
+                             'export NCCL_SOCKET_IFNAME=enp0s31f6',])
         slurm_commands={}
     sub_commands.extend([ '#SBATCH --{}={}\n'.format(cmd, value) for  (cmd, value) in slurm_commands.items()])
     sub_commands.extend([
