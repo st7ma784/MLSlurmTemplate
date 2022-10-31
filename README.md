@@ -25,7 +25,11 @@
   - When happy with code functionality, deploy the code.
   - Login to your favourite SLURM cluster - Such as the N8/Bede cluster, (HEC T.B.D) or an on-prem cluster
   - type into the CLI '''python Launch.py --dir <SLURM DATA DIR> --num_trials <WhatEverYouFancy>'''
-
+### And Finally:
+  - To Launch, call python Launch.py 
+  - --num_trials > 0 means the option in the argparser are randomly selected, and jobs are queued on the Cluster, 
+  - --num_trials == 0 is use the default args, this is the standard behaviour, and is useful for debugging. You can manually specify arguements in the commandline to overwrite the default. 
+  - --num_trials == -1 makes the local node pick a random config -- great for checking before landing on a server somewhere. 
 
 ## Other Files: 
 #### A Train script - models/train.py 
