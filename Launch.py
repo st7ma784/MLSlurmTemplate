@@ -46,6 +46,10 @@ def train(config={
     if isinstance(p,str):
         p=16 if p=="bf16" else int(p)  ##needed for BEDE
     print("Launching with precision",p)
+
+    #workaround for NCCL issues on windows 
+    if sys.platform == "win32":
+        os.environ["PL_TORCH_DISTRIBUTED_BACKEND"]='gloo'
     trainer=pytorch_lightning.Trainer(
             devices=devices,
             # auto_select_gpus=True,
