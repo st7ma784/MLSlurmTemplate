@@ -40,6 +40,9 @@ In this file, we've put some exmaple blocks for inspiration to get you going inc
 #### A DataModule.py
 This contains all the logic surrrounding how our dataset is downloaded and/or preprocessed. Would recommend putting anything CPU-bound prep wise or non-training like tokenizations in here! This can be tricky to debug, and we'd recommend sticking closely to the example, and checking whether files exist before re-downloading. 
 
+#### Good practice...
+When deploying code, consider using git deploy keys, giving individual servers(/login nodes) the ability to pull your code.
+
 #### PIP/CONDA env
 Where we store all the libraries needed, by default this is wandb, PL, pySmartDL (for speedy dataset downloads) 
 This can be generated from a working env with 
