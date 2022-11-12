@@ -123,7 +123,11 @@ def SlurmRun(trialconfig):
     ])
     script_name= os.path.realpath(sys.argv[0]) #Find this scripts name...
     trialArgs=__get_hopt_params(trialconfig)
-
+    #If you're deploying prototyping code and often changing your pip env, 
+    # consider adding in a 'scopy requirements.txt
+    # and then append command 'pip install -r requirements.txt...
+    # This should add your pip file from the launch dir to the run location, then install on each node. 
+    
     sub_commands.append('srun {} {} {}'.format(comm, script_name,trialArgs))
     #when launched, this script will be called with no trials, and so drop into the wandbtrain section, 
     sub_commands = [x.lstrip() for x in sub_commands]        
