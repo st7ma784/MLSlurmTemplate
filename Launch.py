@@ -26,7 +26,7 @@ def train(config={
         print("NO CODE VER SPECIFIED!!")
         from models.train import myLightningModule
 
-    model=LightningT5Module(  **config)
+    model=myLightningModule(  **config)
     if dir is None:
         dir=config.get("dir",".")
     if Dataset is None:
