@@ -51,5 +51,8 @@ conda env export > environment.yml
 ```
 When deploying, it's worth following your clusters' own guides for environment setup. Define in the requirements just the necessary PIP packages if you can. 
 
+##Hex deployment 
+To do.... dockercompose with GPUS?
+
 
 
