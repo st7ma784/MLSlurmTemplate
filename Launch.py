@@ -81,7 +81,7 @@ def wandbtrain(config=None,dir=None,devices=None,accelerator=None,Dataset=None):
     else: 
         #We've got no config, so we'll just use the default, and hopefully a trainAgent has been passed
         import wandb
-        print("here")
+        print("Would recommend changing projectname according to config flags if major version swithching happens")
         run=wandb.init(project="<PROJECTNAME>",entity="<WANDBUSER>",name="<PROJECTNAME>",config=config)
         logtool= pytorch_lightning.loggers.WandbLogger( project="<PROJECTNAME>",entity="<WANDBUSER>",experiment=run, save_dir=dir)
         config=run.config.as_dict()
