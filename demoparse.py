@@ -1,6 +1,6 @@
 from test_tube import HyperOptArgumentParser
 
-class parser(HyperOptArgumentParser):
+class baseparser(HyperOptArgumentParser):
     def __init__(self,*args,strategy="random_search",**kwargs):
 
         super().__init__( *args,strategy=strategy, add_help=False) # or random search
@@ -21,7 +21,43 @@ class parser(HyperOptArgumentParser):
     def __dict__(self):
         return {k:self.parse_args().__dict__[k] for k in self.argNames}
 
+import wandb
+from tqdm import tqdm
 
+
+class parser(baseparser):
+    def __init__(self,*args,strategy="random_search",**kwargs):
+
+        super().__init__( *args,strategy=strategy, add_help=False,**kwargs) # or random search
+        self.run_configs=set()
+        self.keys=set()
+    def generate_wandb_trials(self,entity,project):
+        api = wandb.Api()
+        runs = api.runs(entity + "/" + project)
+        print("checking prior runs")
+        for run in tqdm(runs):
+            config=run.config
+            for key in config.keys():
+                self.keys.add(key)
+            #print(config)
+            values=list([str(i) for i in run.config.values()])
+            values.sort()
+            code="_".join(values)
+            self.run_configs.add(code)
+        hyperparams = self.parse_args()
+        NumTrials=hyperparams.num_trials if hyperparams.num_trials>0 else 1
+        trials=hyperparams.generate_trials(NumTrials)
+        print("checking if already done...")
+        for trial in tqdm(trials):
+            values=list([str(v) for k,v in trial.__dict__.items() if k in self.keys])
+            values.sort()
+            code="_".join(values)
+            while code in self.run_configs:
+                trial=hyperparams.generate_trials(1)[0]
+                values=[str(v) for k,v in trial.__dict__.items() if k in self.keys]
+                values.sort()
+                code="_".join(values)
+        return trials
         
 # Testing to check param outputs
 if __name__== "__main__":
