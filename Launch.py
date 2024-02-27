@@ -174,36 +174,35 @@ if __name__ == '__main__':
     defaultConfig=hyperparams.__dict__
     
     NumTrials=hyperparams.num_trials
-    #BEDE has Env var containing hostname  #HOSTNAME=login2.bede.dur.ac.uk check we arent launching on this node
-    if NumTrials==-1:
-        #debug mode - We want to just run in debug mode... 
-        #pick random config and have at it! 
-        
-        trial=hyperparams.generate_trials(1)[0]
-        #We'll grab a random trial, BUT have to launch it with KWARGS, so that DDP works.       
-        #result = call('{} {} --num_trials=0 {}'.format("python",os.path.realpath(sys.argv[0]),__get_hopt_params(trial)), shell=True)
 
-        print("Running trial: {}".format(trial))
-        
-        wandbtrain(trial)
-
-    elif NumTrials ==0 and not str(os.getenv("HOSTNAME","localhost")).startswith("login"): #We'll do a trial run...
+    if NumTrials ==0 and not str(os.getenv("HOSTNAME","localhost")).startswith("login"): #We'll do a trial run...
         #means we've been launched from a BEDE script, so use config given in args///
         wandbtrain(hyperparams)
 
     #OR To run with Default Args
     else: 
-        trials=hyperparams.generate_trials(NumTrials)
+        trials=myparser.generate_wandb_trials("st7ma784","Bertscore")
+        #this generates a random trial NOT YET COMPLETED!
+        if len(trials)==1:
 
-        for i,trial in enumerate(trials):             
-            command=SlurmRun(trial)
-            slurm_cmd_script_path =  os.path.join(defaultConfig.get("dir","."),"slurm_cmdtrial{}.sh".format(i))
+            trial=trials[0]
+            #We'll grab a random trial, BUT have to launch it with KWARGS, so that DDP works.       
+            #result = call('{} {} --num_trials=0 {}'.format("python",os.path.realpath(sys.argv[0]),__get_hopt_params(trial)), shell=True)
 
-            with open(slurm_cmd_script_path, "w") as f:
-                f.write(command)
-            print('\nlaunching exp...')
-            result = call('{} {}'.format("sbatch", slurm_cmd_script_path), shell=True)
-            if result == 0:
-                print('launched exp ', slurm_cmd_script_path)
-            else:
-                print('launch failed...')  
+            print("Running trial: {}".format(trial))
+            
+            wandbtrain(trial)
+        else:
+            for i,trial in enumerate(trials):             
+                command=SlurmRun(trial)
+                os.makedirs(os.path.join(".","BERTSCORER"),exist_ok=True)
+                slurm_cmd_script_path =  os.path.join(".","BERTSCORER","slurm_cmdtrial{}.sh".format(i))
+
+                with open(slurm_cmd_script_path, "w") as f:
+                    f.write(command)
+                print('\nlaunching exp...')
+                result = call('{} {}'.format("sbatch", slurm_cmd_script_path), shell=True)
+                if result == 0:
+                    print('launched exp ', slurm_cmd_script_path)
+                else:
+                    print('launch failed...')  
