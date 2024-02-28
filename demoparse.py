@@ -43,7 +43,7 @@ class parser(baseparser):
             #print(config)
             sortedkeys=list([str(i) for i in config.keys()])
             sortedkeys.sort()
-            values=list([str(config[i]) for i in sortedkeys()])
+            values=list([str(config[i]) for i in sortedkeys])
             code="_".join(values)
             self.run_configs.add(code)
         hyperparams = self.parse_args()
