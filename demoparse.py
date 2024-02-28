@@ -25,6 +25,7 @@ import wandb
 from tqdm import tqdm
 
 
+
 class parser(baseparser):
     def __init__(self,*args,strategy="random_search",**kwargs):
 
@@ -40,8 +41,9 @@ class parser(baseparser):
             for key in config.keys():
                 self.keys.add(key)
             #print(config)
-            values=list([str(i) for i in run.config.values()])
-            values.sort()
+            sortedkeys=list([str(i) for i in config.keys()])
+            sortedkeys.sort()
+            values=list([str(config[i]) for i in sortedkeys()])
             code="_".join(values)
             self.run_configs.add(code)
         hyperparams = self.parse_args()
@@ -49,13 +51,16 @@ class parser(baseparser):
         trials=hyperparams.generate_trials(NumTrials)
         print("checking if already done...")
         for trial in tqdm(trials):
-            values=list([str(v) for k,v in trial.__dict__.items() if k in self.keys])
-            values.sort()
+            sortedkeys=list([str(i) for i in self.keys])
+            sortedkeys.sort()
+            values=list([str(trial.__dict__[k]) for k in sortedkeys if k in trial.__dict__])
+            
             code="_".join(values)
             while code in self.run_configs:
                 trial=hyperparams.generate_trials(1)[0]
-                values=[str(v) for k,v in trial.__dict__.items() if k in self.keys]
-                values.sort()
+                sortedkeys=list([str(i) for i in self.keys])
+                sortedkeys.sort()
+                values=list([str(trial.__dict__[k]) for k in sortedkeys if k in trial.__dict__])
                 code="_".join(values)
         return trials
         
