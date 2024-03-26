@@ -34,14 +34,13 @@ class parser(baseparser):
         self.keys=set()
     def generate_wandb_trials(self,entity,project):
         api = wandb.Api()
+            api = wandb.Api()
+
         runs = api.runs(entity + "/" + project)
         print("checking prior runs")
         for run in tqdm(runs):
             config=run.config
-            for key in config.keys():
-                self.keys.add(key)
-            #print(config)
-            sortedkeys=list([str(i) for i in config.keys()])
+            sortedkeys=list([str(i) for i in config.keys() if i in self.keys_of_interest])
             sortedkeys.sort()
             values=list([str(config[i]) for i in sortedkeys])
             code="_".join(values)
@@ -50,19 +49,23 @@ class parser(baseparser):
         NumTrials=hyperparams.num_trials if hyperparams.num_trials>0 else 1
         trials=hyperparams.generate_trials(NumTrials)
         print("checking if already done...")
+        trial_list=[]
         for trial in tqdm(trials):
-            sortedkeys=list([str(i) for i in self.keys])
+
+            sortedkeys=list([str(i) for i in trial.__dict__.keys() if i in self.keys_of_interest])
             sortedkeys.sort()
-            values=list([str(trial.__dict__[k]) for k in sortedkeys if k in trial.__dict__])
+            values=list([str(trial.__dict__[k]) for k in sortedkeys])
             
             code="_".join(values)
             while code in self.run_configs:
                 trial=hyperparams.generate_trials(1)[0]
-                sortedkeys=list([str(i) for i in self.keys])
+                sortedkeys=list([str(i) for i in trial.__dict__.keys() if i in self.keys_of_interest])
                 sortedkeys.sort()
-                values=list([str(trial.__dict__[k]) for k in sortedkeys if k in trial.__dict__])
+                values=list([str(trial.__dict__[k]) for k in sortedkeys])
+            
                 code="_".join(values)
-        return trials
+            trial_list.append(trial)
+        return trial_list
         
 # Testing to check param outputs
 if __name__== "__main__":
