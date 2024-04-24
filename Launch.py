@@ -14,7 +14,7 @@ def train(config={
     from pytorch_lightning.callbacks import TQDMProgressBar,EarlyStopping
     import datetime
     from pytorch_lightning.strategies import FSDPStrategy
-    from pytorch_lightning.plugins.environments import SLURMEnvironment, signal
+    from pytorch_lightning.plugins.environments import SLURMEnvironment
 
     #### EDIT HERE FOR DIFFERENT VERSIONS OF A MODEL
     from models.train import myLightningModule
