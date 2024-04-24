@@ -27,10 +27,10 @@ class myLightningModule(LightningModule):
         self.loss=torch.nn.CrossEntropyLoss()
         #Define your own model here, 
         self.model=torch.nn.Sequential(*[
-            torch.nn.Linear(50000,512),
+            torch.nn.Linear(5000,512),
             torch.nn.Linear(512,256),
             torch.nn.Linear(256,512),
-            torch.nn.Linear(512,40000)
+            torch.nn.Linear(512,4000)
 
         ])
     def forward(self,input):
