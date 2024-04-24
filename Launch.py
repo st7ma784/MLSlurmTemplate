@@ -46,13 +46,13 @@ def train(config={
     trainer=pytorch_lightning.Trainer(
             devices=2,
             num_nodes=3,
-            accelerator="cpu",
+            accelerator="gpu",
             max_epochs=200,
             #profiler="advanced",
             plugins=[SLURMEnvironment()],
             #https://lightning.ai/docs/pytorch/stable/clouds/cluster_advanced.html
             logger=logtool,
-            strategy=FSDPStrategy(accelerator="cpu",
+            strategy=FSDPStrategy(accelerator="gpu",
                                  parallel_devices=6,
                                    cluster_environment=SLURMEnvironment(),
                                    timeout=datetime.timedelta(seconds=1800),
@@ -116,7 +116,7 @@ def SlurmRun(trialconfig):
         comm="python3"
     else: 
         
-        sub_commands.extend(['#SBATCH -p parallel',
+        sub_commands.extend(['#SBATCH -p gpu-medium',
                              'export CONDADIR=/storage/hpc/46/manders3/conda4/open-ce',
                              'export NCCL_SOCKET_IFNAME=enp0s31f6',])
     sub_commands.extend([ '#SBATCH --{}={}\n'.format(cmd, value) for  (cmd, value) in slurm_commands.items()])
