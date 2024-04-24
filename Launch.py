@@ -122,7 +122,7 @@ def SlurmRun(trialconfig):
     sub_commands.extend([ '#SBATCH --{}={}\n'.format(cmd, value) for  (cmd, value) in slurm_commands.items()])
     sub_commands.extend([
         'export SLURM_NNODES=$SLURM_JOB_NUM_NODES',
-        'export wandb=<YOURWANDBAPIKEY>',
+        'export wandb=9cf7e97e2460c18a89429deed624ec1cbfb537bc',
         'source $CONDADIR/etc/profile.d/conda.sh',
         'conda activate $CONDADIR/envs/open-ce',# ...and activate the conda environment
     ])
