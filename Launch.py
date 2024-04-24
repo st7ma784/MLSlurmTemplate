@@ -44,7 +44,7 @@ def train(config={
     if sys.platform == "win32":
         os.environ["PL_TORCH_DISTRIBUTED_BACKEND"]='gloo'
     trainer=pytorch_lightning.Trainer(
-            devices=3,
+            devices=2,
             num_nodes=3,
             accelerator="cpu",
             max_epochs=200,
@@ -170,7 +170,7 @@ def __should_escape(v):
     v = str(v)
     return '[' in v or ';' in v or ' ' in v
 if __name__ == '__main__':
-    from argParser import parser
+    from demoparse import parser
     from subprocess import call
 
     myparser=parser()
