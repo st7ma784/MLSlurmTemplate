@@ -34,7 +34,6 @@ class parser(baseparser):
         self.keys=set()
     def generate_wandb_trials(self,entity,project):
         api = wandb.Api()
-            api = wandb.Api()
 
         runs = api.runs(entity + "/" + project)
         print("checking prior runs")
