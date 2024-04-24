@@ -49,12 +49,12 @@ def train(config={
             accelerator="cpu",
             max_epochs=200,
             #profiler="advanced",
-            plugins=[SLURMEnvironment(requeue_signal=signal.SIGHUP)],
+            plugins=[SLURMEnvironment()],
             #https://lightning.ai/docs/pytorch/stable/clouds/cluster_advanced.html
             logger=logtool,
             strategy=FSDPStrategy(accelerator="cpu",
                                  parallel_devices=6,
-                                   cluster_environment=SLURMEnvironment(requeue_signal=signal.SIGHUP),
+                                   cluster_environment=SLURMEnvironment(),
                                    timeout=datetime.timedelta(seconds=1800),
                                     cpu_offload=True,
                                     mixed_precision=None,
@@ -100,7 +100,7 @@ def SlurmRun(trialconfig):
         '#SBATCH --job-name={}'.format(job_with_version), 
         '#SBATCH --nodes=2',  #Nodes per experiment
         '#SBATCH --ntasks-per-node=3',# Set this to GPUs per node. 
-        '#SBATCH --gres=gpu:3',  #{}'.format(per_experiment_nb_gpus),
+        # '#SBATCH --gres=gpu:3',  #{}'.format(per_experiment_nb_gpus),
         f'#SBATCH --signal=USR1@{5 * 60}',
         '#SBATCH --mail-type={}'.format(','.join(['END','FAIL'])),
         '#SBATCH --mail-user={}'.format('YOURMAIL@gmail.com'),
@@ -116,7 +116,7 @@ def SlurmRun(trialconfig):
         comm="python3"
     else: 
         
-        sub_commands.extend(['#SBATCH -p gpu-medium',
+        sub_commands.extend(['#SBATCH -p parallel',
                              'export CONDADIR=/storage/hpc/46/manders3/conda4/open-ce',
                              'export NCCL_SOCKET_IFNAME=enp0s31f6',])
     sub_commands.extend([ '#SBATCH --{}={}\n'.format(cmd, value) for  (cmd, value) in slurm_commands.items()])
