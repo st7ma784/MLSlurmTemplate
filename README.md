@@ -54,5 +54,10 @@ When deploying, it's worth following your clusters' own guides for environment s
 ##Hex deployment 
 To do.... dockercompose with GPUS?
 
+##LLMS 
 
+It's more than likely if you're here, your doing research on big models. You may find it useful to explore the FSDPLaunch file, for submitting models too big for a single node!
+
+(remember for caching and files: on hec/bede
+storage for moderate size data (up to 100G), scratch for larger data (up to 10TB))
 
