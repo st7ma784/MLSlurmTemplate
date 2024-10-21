@@ -93,6 +93,32 @@ def wandbtrain(config=None,dir=None,devices=None,accelerator=None,Dataset=None):
         config=run.config.as_dict()
 
     train(config,dir,devices,accelerator,Dataset,logtool)
+
+
+def neptunetrain(config=None,dir=None,devices=None,accelerator=None,Dataset=None):
+    
+        import pytorch_lightning
+        if config is not None:
+            config=config.__dict__
+            dir=config.get("dir",dir)
+            logtool= pytorch_lightning.loggers.NeptuneLogger( project="TestDeploy",entity="st7ma784", save_dir=dir)
+            print(config)
+    
+        else:
+            #We've got no config, so we'll just use the default, and hopefully a trainAgent has been passed
+            import neptune
+            print("Would recommend changing projectname according to config flags if major version swithching happens")
+            run=neptune.init(project="TestDeploy",entity="st7ma784",name="TestDeploy",config=config)
+            logtool= pytorch_lightning.loggers.NeptuneLogger( project="TestDeploy",entity="st7ma784",experiment=run, save_dir=dir)
+            config=run.config.as_dict()
+    
+        train(config,dir,devices,accelerator,Dataset,logtool)
+
+
+
+
+
+
 def SlurmRun(trialconfig):
 
     job_with_version = '{}v{}'.format("SINGLEGPUTESTLAUNCH", 0)
@@ -198,12 +224,29 @@ if __name__ == '__main__':
 
     elif NumTrials ==0 and not str(os.getenv("HOSTNAME","localhost")).startswith("login"): #We'll do a trial run...
         #means we've been launched from a BEDE script, so use config given in args///
-        wandbtrain(hyperparams)
+        
+        if os.getenv("WANDB_API_KEY"):
 
+            wandbtrain(hyperparams)
+        elif os.getenv("NEPTUNE_API_TOKEN"):
+            print("NEPTUNE API KEY found")
+            neptunetrain(hyperparams)
+        else:
+            print("No logging API found, using default config")
+            train(hyperparams)
     #OR To run with Default Args
     else:
-        trials=hyperparams.generate_trials(NumTrials)
-
+        # check for wandb login details in env vars
+        if os.getenv("WANDB_API_KEY"):
+            print("WANDB API KEY found")
+            trials= myparser.generate_wandb_trials(<WANDBUSER>,<YOURPROJECTNAME>)
+        #check for neptune login details in env vars
+        elif os.getenv("NEPTUNE_API_TOKEN"):
+            print("NEPTUNE API KEY found")
+            trials= myparser.generate_neptune_trials(<NEPTUNEUSER>,<YOURPROJECTNAME>))
+        else:
+            print("No logging API found, using default config")
+            trials= hyperparams.generate_trials(NumTrials)  
         for i,trial in enumerate(trials):
             command=SlurmRun(trial)
             slurm_cmd_script_path =  os.path.join(defaultConfig.get("dir","."),"slurm_cmdtrial{}.sh".format(i))

@@ -32,6 +32,46 @@ class parser(baseparser):
         super().__init__( *args,strategy=strategy, add_help=False,**kwargs) # or random search
         self.run_configs=set()
         self.keys=set()
+    def generate_trials(self):
+        hyperparams = self.parse_args()
+        NumTrials=hyperparams.num_trials if hyperparams.num_trials>0 else 1
+        trials=hyperparams.generate_trials(NumTrials)
+        return trials
+    def generate_neptune_trials(self,project):
+        #this function uses the nepune api to get the trials that exist, 
+        #and then generates new trials based on the hyperparameters
+        import neptune
+        from neptunecontrib.api import search_runs
+        neptune.init(project_qualified_name=project)
+        runs = search_runs(project)
+        print("checking prior runs")
+        for run in tqdm(runs):
+            config=run.get_parameters()
+            sortedkeys=list([str(i) for i in config.keys() if i in self.keys_of_interest])
+            sortedkeys.sort()
+            values=list([str(config[i]) for i in sortedkeys])
+            code="_".join(values)
+            self.run_configs.add(code)
+        hyperparams = self.parse_args()
+        NumTrials=hyperparams.num_trials if hyperparams.num_trials>0 else 1
+        trials=hyperparams.generate_trials(NumTrials)
+        print("checking if already done...")
+        trial_list=[]
+        for trial in tqdm(trials):
+            sortedkeys=list([str(i) for i in trial.__dict__.keys() if i in self.keys_of_interest])
+            sortedkeys.sort()
+            values=list([str(trial.__dict__[k]) for k in sortedkeys])
+            
+            code="_".join(values)
+            while code in self.run_configs:
+                trial=hyperparams.generate_trials(1)[0]
+                sortedkeys=list([str(i) for i in trial.__dict__.keys() if i in self.keys_of_interest])
+                sortedkeys.sort()
+                values=list([str(trial.__dict__[k]) for k in sortedkeys])
+                code="_".join(values)
+            trial_list.append(trial)
+        return trial_list
+
     def generate_wandb_trials(self,entity,project):
         api = wandb.Api()
 
