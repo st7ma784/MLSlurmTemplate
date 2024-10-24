@@ -15,9 +15,9 @@ class baseparser(HyperOptArgumentParser):
         self.opt_list("--accelerator", default='gpu', type=str, options=['gpu'], tunable=False)
         self.opt_list("--num_trials", default=0, type=int, tunable=False)
         #self.opt_range('--neurons', default=50, type=int, tunable=True, low=100, high=800, nb_samples=8, log_base=None)
-        
+        self.opt_list("--EVALOnLaunch", default=False, type=bool, options=[True,False], tunable=False)
         #This is important when passing arguments as **config in launcher
-        self.argNames=["dir","log_path","learning_rate","batch_size","modelname","precision","codeversion","accelerator","num_trials"]
+        self.argNames=["dir","log_path","learning_rate","batch_size","modelname","precision","codeversion","accelerator","num_trials","EVALOnLaunch"]
     def __dict__(self):
         return {k:self.parse_args().__dict__[k] for k in self.argNames}
 
